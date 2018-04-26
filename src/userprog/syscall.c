@@ -15,6 +15,8 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
+
+  printf ("system call!\n");
   int syscall_number;
   void *argument_1;
   void *argument_2;
