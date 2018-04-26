@@ -21,27 +21,35 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+/* arguments parsing and passing to process */
+void arguments_to_stack (char *file_name, void **esp);
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
    thread id, or TID_ERROR if the thread cannot be created. */
+
 tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
   tid_t tid;
-
+  char *token, *save_ptr;
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
+  printf("process_execute () runs with '%s' as an argument\n", file_name);
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-
+  /* Tokenize file_name to get process name */
+  token = strtok_r (file_name, " ", &save_ptr);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
+  /* wait for the process ends */
+  else
+    process_wait (tid);
   return tid;
 }
 
@@ -61,6 +69,9 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+  /* If load success, pass arguments. */
+  if (success)
+    arguments_to_stack (file_name, &if_.esp);
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -82,12 +93,12 @@ start_process (void *file_name_)
    child of the calling process, or if process_wait() has already
    been successfully called for the given TID, returns -1
    immediately, without waiting.
-
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  while (1);
   return -1;
 }
 
@@ -206,7 +217,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp) 
+load (const char *file_name_, void (**eip) (void), void **esp) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -214,6 +225,15 @@ load (const char *file_name, void (**eip) (void), void **esp)
   off_t file_ofs;
   bool success = false;
   int i;
+
+  /* string tokenize to make file_name to real file name */
+  char *file_name;
+  file_name = palloc_get_page (0);
+  if(file_name == 0)
+    thread_exit ();
+  strlcpy (file_name, file_name_, PGSIZE);
+  char *token, *save_ptr;
+  file_name = strtok_r(file_name, " ", &save_ptr);
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
@@ -311,6 +331,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   success = true;
 
  done:
+  /* free the file_name page for make no leak. We always arrive here. */
+  palloc_free_page (file_name);
   /* We arrive here whether the load is successful or not. */
   file_close (file);
   return success;
@@ -368,15 +390,11 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
 /* Loads a segment starting at offset OFS in FILE at address
    UPAGE.  In total, READ_BYTES + ZERO_BYTES bytes of virtual
    memory are initialized, as follows:
-
         - READ_BYTES bytes at UPAGE must be read from FILE
           starting at offset OFS.
-
         - ZERO_BYTES bytes at UPAGE + READ_BYTES must be zeroed.
-
    The pages initialized by this function must be writable by the
    user process if WRITABLE is true, read-only otherwise.
-
    Return true if successful, false if a memory allocation error
    or disk read error occurs. */
 static bool
@@ -462,4 +480,55 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+/* parse and pass arguments with this function */
+void
+arguments_to_stack (char *file_name, void **esp)
+{
+  char *token, *save_ptr;
+  int count;
+  int iter;
+  int str_len;
+  char *word_addr;
+  
+  /* count args and push it in stack left-to-right order
+     because the documents says that this order is not important
+     we only have to care about argv array's address. */
+  count = 0;
+  for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr))
+  {
+    count += 1;
+    str_len = strlen (token);
+    *esp -= (str_len + 1);
+    strlcpy ((char *)(*esp), token, str_len + 1);
+    word_addr = (char *)(*esp); 
+  }
+  /* word-align and argv[count] */
+  
+  *esp -= ((int)(*esp) & 0x3);
+  /* it is zero page (needs check, not sure. but it seems like it. */
+  //*(uint8_t *)(*esp) = 0;
+  *esp -= 4;
+  *(char **)(*esp) = 0;
+  
+  /* argv [count-1] to argv[0] */
+  iter = count;
+  while (iter > 0)
+  {
+    *esp -= 4;
+    *(char **)(*esp) = word_addr;
+    word_addr += strlen (word_addr) + 1;
+    iter -= 1; 
+  } 
+
+  /* argv** and argc and fake return address */
+  *esp -= 4;   
+  *(char ***)(*esp) = (*esp) + 4;
+  *esp -= 4;
+  *(int *)(*esp) = count;
+  *esp -= 4;
+  *(void **)(*esp) = 0;
+
+  hex_dump (0, *esp, 128, true);
 }
