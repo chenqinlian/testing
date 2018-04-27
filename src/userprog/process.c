@@ -500,8 +500,10 @@ arguments_to_stack (char *file_name, void **esp)
   int iter;
   int str_len;
   char *word_addr;
-  
+
+  printf("arguments parsing: %s\n\n", file_name);
   printf("arguments to stack command_cql: %s\n", file_name);
+  printf("PHYS_BASE_cql: %x\n", PHYS_BASE);
 
   /* count args and push it in stack left-to-right order
      because the documents says that this order is not important
@@ -541,5 +543,5 @@ arguments_to_stack (char *file_name, void **esp)
   *esp -= 4;
   *(void **)(*esp) = 0;
 
-  hex_dump (0, *esp, 128, true);
+  hex_dump (PHYS_BASE - 128, PHYS_BASE - 128, 128, true);
 }
