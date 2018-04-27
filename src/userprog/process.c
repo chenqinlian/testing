@@ -34,21 +34,30 @@ process_execute (const char *file_name)
   char *fn_copy;
   tid_t tid;
   char *token, *save_ptr;
+
+  printf("process_execute () runs with '%s' as an argument\n", file_name);
+
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
-  printf("process_execute () runs with '%s' as an argument\n", file_name);
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+
   /* Tokenize file_name to get process name */
   token = strtok_r (file_name, " ", &save_ptr);
+
+  printf("cql_token:%s\n\n", token);
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   /* wait for the process ends */
   else
+
+    printf("process_waiting_cql\n");
     process_wait (tid);
   return tid;
 }
@@ -492,6 +501,8 @@ arguments_to_stack (char *file_name, void **esp)
   int str_len;
   char *word_addr;
   
+  printf("arguments to stack command_cql: %s\n", file_name);
+
   /* count args and push it in stack left-to-right order
      because the documents says that this order is not important
      we only have to care about argv array's address. */
