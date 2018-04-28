@@ -534,8 +534,7 @@ arguments_to_stack (char *file_name, void **esp)
 
 
      //printf("%s\n", argv[i]);
-     //printf("step2, convert:%x\n", &argv[i]);
-     printf("step2, add_temp:%x\n", argv_address[i]);
+     printf("step2, argv_address[i]:%x\n", argv_address[i]);
   }
 
   *esp = temp;
@@ -560,11 +559,14 @@ arguments_to_stack (char *file_name, void **esp)
   
   }    
 
+  //step6: push address of argv_address[0] to its *esp address
+    
 
-  //Step6: push argc 
+
+  //Step7: push argc 
 
 
-  //Step7: push fake return address 
+  //Step8: push fake return address 
 
   //show stack
   hex_dump (PHYS_BASE - 128, PHYS_BASE - 128, 128, true);
