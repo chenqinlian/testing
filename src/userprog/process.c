@@ -560,13 +560,18 @@ arguments_to_stack (char *file_name, void **esp)
   }    
 
   //step6: push address of argv_address[0] to its *esp address
-    
+    char *argv0_address = *esp;
 
+    *esp -= sizeof(char *);
+    *(char **)(*esp) = argv0_address;
 
   //Step7: push argc 
-
+    *esp -= sizeof(int);
+    memcpy(*esp, &argc, sizeof(int));
 
   //Step8: push fake return address 
+    *esp -= sizeof(void *);
+     *(void **)(*esp) = 0;
 
   //show stack
   hex_dump (PHYS_BASE - 128, PHYS_BASE - 128, 128, true);
