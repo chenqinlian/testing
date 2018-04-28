@@ -520,20 +520,22 @@ arguments_to_stack (char *file_name, void **esp)
 
   //Step2: push each argv[i] to its *esp address, record esp address
 
-  int   argv_address[DEFARULT_ARGV];	   //record address
-
+  char  *argv_address[DEFARULT_ARGV];
   int temp = *esp;
   
   printf("step2: esp_cql: %x\n", *esp);
   for(int i=0; i<argc; i++){
 
-     memcpy(*esp, argv[i], strlen(argv[i])+1);
      argv_address[i] = *esp;
+
+     memcpy(*esp, argv[i], strlen(argv[i])+1);
+
      *esp += strlen(argv[i])+1; //record address
 
-     //printf("%s\n", argv[i]);
-     printf("step2, convert:%x\n", argv_address[i]);
 
+     //printf("%s\n", argv[i]);
+     //printf("step2, convert:%x\n", &argv[i]);
+     printf("step2, add_temp:%x\n", argv_address[i]);
   }
 
   *esp = temp;
@@ -553,7 +555,8 @@ arguments_to_stack (char *file_name, void **esp)
 
     *esp -= sizeof(char *);
    
-    //printf("Step5,esp:%x\n",*esp);
+    printf("Step5,esp:%x\n",*esp);
+    *(char **)(*esp) = argv_address[i];
   
   }    
 
