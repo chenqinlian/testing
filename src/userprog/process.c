@@ -496,52 +496,73 @@ void
 arguments_to_stack (char *file_name, void **esp)
 {
   char *token, *save_ptr;
-  int count;
-  int iter;
-  int str_len;
-  char *word_addr;
 
   printf("arguments parsing: %s\n\n", file_name);
   printf("arguments to stack command_cql: %s\n", file_name);
   printf("PHYS_BASE_cql: %x\n", PHYS_BASE);
+  printf("esp_cql: %x\n", *esp);
 
-  /* count args and push it in stack left-to-right order
-     because the documents says that this order is not important
-     we only have to care about argv array's address. */
-  count = 0;
-  for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr))
-  {
-    count += 1;
-    str_len = strlen (token);
-    *esp -= (str_len + 1);
-    strlcpy ((char *)(*esp), token, str_len + 1);
-    word_addr = (char *)(*esp); 
+  //parameter
+  int DEFARULT_ARGV =4;
+  int WORD_SIZE =4; 
+
+
+  //Step1: read tokens from [char *filename], store it in argv[]
+  int argc = 0;
+  char *argv[DEFARULT_ARGV];               //record token
+
+  for(token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
+
+    *esp -=strlen(token)+1;
+    argv[argc] = token;
+    argc++;
   }
-  /* word-align and argv[count] */
-  
-  *esp -= ((int)(*esp) & 0x3);
-  /* it is zero page (needs check, not sure. but it seems like it. */
-  //*(uint8_t *)(*esp) = 0;
-  *esp -= 4;
-  *(char **)(*esp) = 0;
-  
-  /* argv [count-1] to argv[0] */
-  iter = count;
-  while (iter > 0)
-  {
-    *esp -= 4;
-    *(char **)(*esp) = word_addr;
-    word_addr += strlen (word_addr) + 1;
-    iter -= 1; 
-  } 
 
-  /* argv** and argc and fake return address */
-  *esp -= 4;   
-  *(char ***)(*esp) = (*esp) + 4;
-  *esp -= 4;
-  *(int *)(*esp) = count;
-  *esp -= 4;
-  *(void **)(*esp) = 0;
+  //Step2: push each argv[i] to its *esp address, record esp address
 
+  int   argv_address[DEFARULT_ARGV];	   //record address
+
+  int temp = *esp;
+  
+  printf("step2: esp_cql: %x\n", *esp);
+  for(int i=0; i<argc; i++){
+
+     memcpy(*esp, argv[i], strlen(argv[i])+1);
+     argv_address[i] = *esp;
+     *esp += strlen(argv[i])+1; //record address
+
+     //printf("%s\n", argv[i]);
+     printf("step2, convert:%x\n", argv_address[i]);
+
+  }
+
+  *esp = temp;
+
+
+  //Step3: Considering white space for word align (*esp % WORD_SIZE) 
+
+  printf("word_align:%d\n",(size_t) *esp% WORD_SIZE);
+  *esp -= (size_t) *esp% WORD_SIZE; //??need fix
+  
+  //Step4: Considering 4 bits of  white sapce
+  *esp -= (size_t) WORD_SIZE; 
+
+  //Step5: push each argv_address[i] to its *esp address
+
+  for(int i=argc-1;i>=0; i--){
+
+    *esp -= sizeof(char *);
+   
+    //printf("Step5,esp:%x\n",*esp);
+  
+  }    
+
+
+  //Step6: push argc 
+
+
+  //Step7: push fake return address 
+
+  //show stack
   hex_dump (PHYS_BASE - 128, PHYS_BASE - 128, 128, true);
 }
