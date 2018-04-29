@@ -1,8 +1,18 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+
+#include <user/syscall.h>
+#include "devices/input.h"
+#include "devices/shutdown.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
+
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
+#include "userprog/pagedir.h"
+#include "userprog/process.h"
 
 #define MAX_ARGS 4
 
@@ -33,7 +43,10 @@ syscall_handler (struct intr_frame *f)
     }
 
  
-  printf ("system call! syscall number is : %d, ", arg[0]);
+  printf ("system call! syscall number is : %d\n", arg[0]);
+  printf ("  arg[1]: %x\n", arg[1]);
+  printf ("  arg[2]: %x\n", arg[2]);
+  printf ("  arg[3]: %x\n", arg[3]);
 
   switch(arg[0])
   {
@@ -78,4 +91,23 @@ syscall_handler (struct intr_frame *f)
       break;
   }
   thread_exit ();
+}
+
+
+int user_to_kernel_ptr(const void *vaddr){
+
+  return 1;
+}
+
+int process_add_file (struct file *f){
+  return 1;
+}
+
+
+struct file* process_get_file (int fd){
+  return NULL;
+}
+
+void process_close_file (int fd){
+  return;
 }
