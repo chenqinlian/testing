@@ -4,7 +4,15 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+#define MAX_ARGS 4
+
 static void syscall_handler (struct intr_frame *);
+int user_to_kernel_ptr(const void *vaddr);
+int process_add_file (struct file *f);
+struct file* process_get_file (int fd);
+void process_close_file (int fd);
+
+
 
 void
 syscall_init (void) 
@@ -17,16 +25,17 @@ syscall_handler (struct intr_frame *f)
 {
 
   printf ("system call!\n");
-  int syscall_number;
-  void *argument_1;
-  void *argument_2;
-  void *argument_3;
-  /* Number of arguments that are used depends on syscall number.
-     Max number of arguments is 3. */
-  syscall_number = *(int *)(f->esp);
+
+  int i, arg[MAX_ARGS];
+  for (i = 0; i < MAX_ARGS; i++)
+    {
+      arg[i] = * ((int *) f->esp + i);
+    }
+
  
-  printf ("system call! syscall number is : %d, ", syscall_number);
-  switch(syscall_number)
+  printf ("system call! syscall number is : %d, ", arg[0]);
+
+  switch(arg[0])
   {
     case SYS_HALT:
       printf("SYS_HALT\n");
@@ -36,8 +45,6 @@ syscall_handler (struct intr_frame *f)
       break;
     case SYS_EXEC:
       printf("SYS_EXEC\n");
-      argument_1 = (f->esp)+4;
-      printf("exec function with argument '%s'\n", *(char **)argument_1); 
       break;
     case SYS_WAIT:
       printf("SYS_WAIT\n");
