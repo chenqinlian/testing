@@ -165,6 +165,7 @@ typedef uint16_t Elf32_Half;
 #define PE32Ox PRIx32   /* Print Elf32_Off in hexadecimal. */
 #define PE32Hx PRIx16   /* Print Elf32_Half in hexadecimal. */
 
+
 /* Executable header.  See [ELF1] 1-4 to 1-8.
    This appears at the very beginning of an ELF binary. */
 struct Elf32_Ehdr
@@ -214,6 +215,11 @@ struct Elf32_Phdr
 #define PF_X 1          /* Executable. */
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
+
+/* Values for Arguments to stack*/
+#define DEFARULT_ARGV 4
+#define WORD_SIZE 4    
+
 
 static bool setup_stack (void **esp);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
@@ -502,9 +508,6 @@ arguments_to_stack (char *file_name, void **esp)
   printf("PHYS_BASE_cql: %x\n", PHYS_BASE);
   printf("esp_cql: %x\n", *esp);
 
-  //parameter
-  int DEFARULT_ARGV =4;
-  int WORD_SIZE =4; 
 
 
   //Step1: read tokens from [char *filename], store it in argv[]
